@@ -1,0 +1,35 @@
+# Bleeding edge features (experimental strict checks)
+includes:
+    - vendor/phpstan/phpstan/conf/bleedingEdge.neon
+
+parameters:
+    level: max
+    paths:
+        - src
+        - tests
+    
+    # Strictest possible configuration
+    #checkGenericClassInNonGenericObjectType: true
+    #checkMissingIterableValueType: true
+    checkUninitializedProperties: true
+    checkDynamicProperties: true
+    checkTooWideReturnTypesInProtectedAndPublicMethods: true
+    checkImplicitMixed: true
+    checkBenevolentUnionTypes: true
+    
+    # Type coverage requirements
+    typeAliases:
+        UserId: 'int|string'
+        PermissionString: 'string'
+    
+    # Ignore patterns for external libraries
+    ignoreErrors:
+        # ORM entities: auto-generated IDs are set by the database/ORM, not our code
+        # (removed obsolete pattern)
+        
+        # Test classes: properties are initialized in setUp() method
+        - '#Class .*Test has an uninitialized property .*\. Give it default value or assign it in the constructor\.#'
+    
+    # Additional strict checks
+    reportUnmatchedIgnoredErrors: true
+    treatPhpDocTypesAsCertain: false 

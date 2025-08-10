@@ -1,0 +1,18 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Rick-Role CLI Management Tool
+ *
+ * This CLI tool allows you to manage roles, permissions, and user-role assignments
+ * for the Rick-Role RBAC system.
+ */
+
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use RickRole\CLI\CLIBootstrap;
+
+$application = CLIBootstrap::createApplication();
+$application->run();

@@ -1,0 +1,76 @@
+services:
+  lib:
+    build: .
+    container_name: rickrole_lib
+    user: "${UID:-1000}:${GID:-1000}"
+    volumes:
+      - .:/app
+    environment:
+      - PHP_IDE_CONFIG=serverName=rickrole
+      - XDEBUG_CONFIG=client_host=host.docker.internal
+      # Database connection for tools/scripts running in this container
+      - APP_ENV=dev
+      - DB_DRIVER=pdo_mysql
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=rickrole_test
+      - DB_USER=rickrole
+      - DB_PASS=rickrole_pass
+    networks:
+      - rickrole_network
+    depends_on:
+      - mysql
+      - postgres
+
+  composer:
+    build: .
+    container_name: rickrole_composer
+    user: "${UID:-1000}:${GID:-1000}"
+    volumes:
+      - .:/app
+    working_dir: /app
+    entrypoint: ['composer']
+    # command: ['--version']
+    networks:
+      - rickrole_network
+    # profiles:
+    #   - tools
+
+  mysql:
+    image: mysql:8.0
+    container_name: rickrole_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rickrole_root
+      MYSQL_DATABASE: rickrole_test
+      MYSQL_USER: rickrole
+      MYSQL_PASSWORD: rickrole_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - rickrole_network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: rickrole_postgres
+    environment:
+      POSTGRES_DB: rickrole_test
+      POSTGRES_USER: rickrole
+      POSTGRES_PASSWORD: rickrole_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - rickrole_network
+
+
+
+volumes:
+  mysql_data:
+  postgres_data:
+
+networks:
+  rickrole_network:
+    driver: bridge 

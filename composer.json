@@ -1,0 +1,70 @@
+{
+    "name": "managur/rick-role",
+    "description": "The Role Based Access Control library that's never gonna give you up, never gonna let you down, never run around and desert you",
+    "type": "library",
+    "license": "MIT",
+    "keywords": ["rbac", "role", "permission", "access", "control", "authorization"],
+    "authors": [
+        {
+            "name": "Anthony Chambers",
+            "email": "anthony@managur.io"
+        }
+    ],
+    "require": {
+        "php": "^8.4",
+        "doctrine/dbal": "^4.0",
+        "doctrine/migrations": "^3.8",
+        "doctrine/orm": "^3.0",
+        "psr/log": "^3.0",
+        "ramsey/uuid": "^4.7",
+        "ramsey/uuid-doctrine": "^2.1",
+        "symfony/cache": "^7.3",
+        "symfony/console": "^7.0"
+    },
+    "require-dev": {
+        "monolog/monolog": "^3.0",
+        "phpstan/phpstan": "^2.1",
+        "phpunit/phpunit": "^11.0",
+        "psr/clock": "^1.0",
+        "slevomat/coding-standard": "^8.19",
+        "squizlabs/php_codesniffer": "^3.9",
+        "symfony/clock": "^7.0",
+        "vlucas/phpdotenv": "^5.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "RickRole\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "RickRole\\Tests\\": "tests/"
+        }
+    },
+    "bin": [
+        "bin/rick"
+    ],
+    "scripts": {
+        "test": "phpunit",
+        "test-coverage": "phpunit --coverage-html coverage --coverage-text",
+        "analyse": "phpstan analyse src tests --level=8 --memory-limit 512M",
+        "lint": "phpcs",
+        "lint-fix": "phpcbf",
+        "rick-role": "php bin/rick",
+        "post-install-cmd": [
+            "@php bin/post-install-message.php"
+        ],
+        "post-update-cmd": [
+            "@php bin/post-install-message.php"
+        ]
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true,
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

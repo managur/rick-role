@@ -1,0 +1,61 @@
+# Git and version control
+.git
+.gitignore
+.gitattributes
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Documentation
+README.md
+CONTRIBUTING.md
+SECURITY.md
+LICENSE
+*.md
+
+# Test files and coverage
+# tests/
+coverage/
+.phpunit.result.cache
+# phpunit.xml
+
+# Build artifacts
+build/
+dist/
+vendor/
+
+# Docker files
+Dockerfile
+docker-compose.yml
+docker/
+
+# Makefile and scripts
+Makefile
+scripts/
+
+# Environment files
+.env
+.env.*
+
+# Cache and temporary files
+.cache/
+tmp/
+temp/
+*.tmp
+*.log
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Cursor rules
+.cursor/ 
