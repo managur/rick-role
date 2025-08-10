@@ -1,0 +1,90 @@
+# Local Act workflow testing
+bin/act
+.actrc
+
+# Composer
+/vendor/
+composer.lock
+
+# PHPUnit
+/.phpunit.cache
+/coverage/
+/phpunit.xml.local
+
+# IDE and Editor files
+/.vscode/
+/.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker
+/.docker/
+docker-compose.override.yml
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+/build/
+/dist/
+*.phar
+
+# Logs
+*.log
+/logs/
+
+# Cache
+/cache/
+/.cache/
+*.cache
+
+# Temporary files
+/tmp/
+/temp/
+
+# Database files
+*.sqlite
+*.db
+*.sql
+
+# Backup files
+*.backup
+*.bak
+backup.sql
+
+# Security files
+*.pem
+*.key
+*.crt
+
+# Development tools
+/.php-cs-fixer.cache
+/.psalm/
+/psalm.xml
+
+# Documentation build
+/docs/build/
+/_site/
+
+# Package files
+*.tar.gz
+*.zip
+
+# Git hooks (will be installed via make)
+/.git/hooks/pre-commit
+/.git/hooks/pre-push
+
+# PR Description (temporary file)
+PR_DESCRIPTION.md 

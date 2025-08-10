@@ -1,0 +1,56 @@
+#!/bin/bash
+
+# Rick-Role CLI Wrapper
+# This script provides a user-friendly interface to the Rick-Role CLI tool
+# without the Make target interpretation issues
+
+set -e
+
+# Colors for output
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+# Check if we're in a Docker environment
+if [ -f "docker-compose.yml" ] && [ -d ".git" ]; then
+    # We're in the development environment, use Docker
+    if [ $# -eq 0 ]; then
+        echo -e "${YELLOW}Rick-Role CLI${NC}"
+        echo "============="
+        echo ""
+        echo "Usage:"
+        echo "  ./rick role <command> [args...]"
+        echo "  ./rick permission <command> [args...]"
+        echo "  ./rick user <command> [args...]"
+        echo ""
+        echo "Examples:"
+        echo "  ./rick role list"
+        echo "  ./rick role show admin"
+        echo "  ./rick role create admin"
+        echo "  ./rick permission list admin"
+        echo "  ./rick user roles user123"
+        echo ""
+        echo "Run './rick <type> help' for detailed command help"
+        exit 0
+    fi
+    
+    # Execute via Docker
+    docker-compose exec lib php bin/rick "$@"
+else
+    # We're not in the development environment, try to run directly
+    if ! command -v php &> /dev/null; then
+        echo -e "${RED}Error: PHP is not installed or not in PATH${NC}"
+        echo "Please install PHP to use Rick-Role CLI"
+        exit 1
+    fi
+    
+    if [ ! -f "bin/rick" ]; then
+        echo -e "${RED}Error: Rick-Role CLI not found${NC}"
+        echo "Please run this from the Rick-Role project root directory"
+        exit 1
+    fi
+    
+    # Execute directly
+    php bin/rick "$@"
+fi 

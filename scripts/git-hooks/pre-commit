@@ -1,0 +1,21 @@
+#!/bin/sh
+
+set -e
+
+# Run lint
+echo "Running linting checks..."
+if ! docker-compose run -T --rm lib vendor/bin/phpcs; then
+  echo "\033[0;31mLinting failed. Please fix code style issues before committing.\033[0m"
+  exit 1
+fi
+
+# Run quality checks (PHPStan analysis)
+echo "Running quality checks..."
+if ! docker-compose run -T --rm lib vendor/bin/phpstan analyse --configuration=phpstan.neon --memory-limit 512M; then
+  echo "\033[0;31mQuality checks failed. Please fix issues before committing.\033[0m"
+  exit 1
+fi
+
+echo "\033[0;32mAll checks passed! Commit allowed.\033[0m"
+echo "\033[1;33mNote: Full CI workflow will run on push/PR via GitHub Actions.\033[0m"
+exit 0 
