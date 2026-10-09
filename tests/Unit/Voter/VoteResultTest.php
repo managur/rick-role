@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RickRole\Voter\VoteResult;
+use RickRole\Tests\Unit\Fixture\ReasonCode;
 use RickRole\Voter\VoterInterface;
 
 /**
@@ -305,5 +306,32 @@ final class VoteResultTest extends TestCase
     {
         $result = VoteResult::abstain('test');
         self::assertNull($result->voter());
+    }
+
+    #[Test]
+    public function it_returns_null_code_when_not_provided(): void
+    {
+        self::assertNull(VoteResult::allow('Allowed')->code());
+        self::assertNull(VoteResult::deny('Denied')->code());
+        self::assertNull(VoteResult::abstain('Abstained')->code());
+    }
+
+    #[Test]
+    public function it_returns_code_when_provided_as_named_parameter(): void
+    {
+        self::assertSame('role.allow', VoteResult::allow('Allowed', code: 'role.allow')->code());
+        self::assertSame(ReasonCode::Mandatory, VoteResult::deny('Denied', code: ReasonCode::Mandatory)->code());
+        self::assertSame('no.opinion', VoteResult::abstain('Abstained', code: 'no.opinion')->code());
+    }
+
+    #[Test]
+    public function it_returns_code_when_provided_as_positional_parameter(): void
+    {
+        $voter = $this->createMock(VoterInterface::class);
+
+        $result = VoteResult::deny('Denied', $voter, ReasonCode::Expired);
+
+        self::assertSame(ReasonCode::Expired, $result->code());
+        self::assertSame($voter, $result->voter());
     }
 }

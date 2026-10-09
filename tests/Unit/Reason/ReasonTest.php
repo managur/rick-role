@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RickRole\Reason\Reason;
+use RickRole\Tests\Unit\Fixture\ReasonCode;
 use RickRole\Exception\ConfigurationException;
 
 /**
@@ -605,5 +606,102 @@ final class ReasonTest extends TestCase
         $this->assertArrayHasKey('message', $arr);
         $this->assertArrayHasKey('voters', $arr);
         $this->assertIsArray($arr['voters']);
+    }
+
+    #[Test]
+    public function it_has_no_code_initially(): void
+    {
+        self::assertNull($this->reason->code);
+        self::assertNull($this->reason->lastCode);
+    }
+
+    #[Test]
+    public function it_takes_code_from_the_last_decision(): void
+    {
+        $this->reason->addDecision('DENY', 'First', 'first.code');
+        $this->reason->addDecision('DENY', 'Second', ReasonCode::Mandatory);
+
+        self::assertSame(ReasonCode::Mandatory, $this->reason->code);
+        self::assertSame(['[DENY] First', '[DENY] Second'], $this->reason->chain);
+    }
+
+    #[Test]
+    public function it_prefers_code_given_to_the_constructor(): void
+    {
+        $reason = new Reason(123, 'test', code: 'constructor.code');
+        $reason->addDecision('ALLOW', 'Allowed', 'decision.code');
+
+        self::assertSame('constructor.code', $reason->code);
+    }
+
+    #[Test]
+    public function it_still_accepts_the_positional_constructor_without_code(): void
+    {
+        $previous = new Reason(123, 'previous');
+        $reason = new Reason(123, 'test', null, 'Voter', 'DENY', 'Denied', $previous);
+
+        self::assertNull($reason->code);
+        self::assertSame($previous, $reason->previous);
+    }
+
+    #[Test]
+    public function it_checks_string_codes(): void
+    {
+        $this->reason->addDecision('ALLOW', 'Allowed', 'role.allow');
+
+        self::assertTrue($this->reason->is('role.allow'));
+        self::assertFalse($this->reason->is('role.deny'));
+        self::assertTrue($this->reason->isNot('role.deny'));
+        self::assertFalse($this->reason->isNot('role.allow'));
+    }
+
+    #[Test]
+    public function it_checks_enum_codes(): void
+    {
+        $this->reason->addDecision('DENY', 'Mandatory', ReasonCode::Mandatory);
+
+        self::assertTrue($this->reason->is(ReasonCode::Mandatory));
+        self::assertFalse($this->reason->is(ReasonCode::Expired));
+        self::assertTrue($this->reason->isNot(ReasonCode::Expired));
+    }
+
+    #[Test]
+    public function it_does_not_match_an_enum_code_against_its_string_value(): void
+    {
+        $this->reason->addDecision('DENY', 'Mandatory', ReasonCode::Mandatory);
+
+        self::assertFalse($this->reason->is('mandatory'));
+        self::assertTrue($this->reason->isNot('mandatory'));
+    }
+
+    #[Test]
+    public function it_knows_which_voter_decided(): void
+    {
+        $decidingVote = new Reason(123, 'test', null, 'MfaVoter', 'DENY', 'MFA is mandatory');
+        $reason = new Reason(123, 'test', null, 'Rick', 'DENY', 'Deny wins - MFA is mandatory', decidingVote: $decidingVote);
+
+        self::assertTrue($reason->wasDecidedBy('MfaVoter'));
+        self::assertFalse($reason->wasDecidedBy('Rick'));
+        self::assertFalse($reason->wasNotDecidedBy('MfaVoter'));
+        self::assertTrue($reason->wasNotDecidedBy('Rick'));
+        self::assertSame('MFA is mandatory', $reason->given());
+    }
+
+    #[Test]
+    public function it_was_not_decided_by_anyone_without_a_deciding_vote(): void
+    {
+        $reason = new Reason(123, 'test', null, 'Rick', 'ABSTAIN', 'All voters abstained');
+
+        self::assertFalse($reason->wasDecidedBy('Rick'));
+        self::assertTrue($reason->wasNotDecidedBy('Rick'));
+        self::assertSame('All voters abstained', $reason->given());
+    }
+
+    #[Test]
+    public function it_getFullTrace_includes_code(): void
+    {
+        $this->reason->addDecision('DENY', 'Mandatory', ReasonCode::Mandatory);
+
+        self::assertSame(ReasonCode::Mandatory, $this->reason->getFullTrace()['code']);
     }
 }

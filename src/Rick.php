@@ -71,6 +71,7 @@ final class Rick
 
         $strategy = $this->configuration->strategy();
         $voteResults = [];
+        $voteReasons = [];
         $voterDecisions = [];
 
         foreach ($voters as $voter) {
@@ -89,7 +90,8 @@ final class Rick
                 'permission' => (string)$to,
                 'voter' => $voter::class,
                 'decision' => $voteResult->decision(),
-                'message' => $voteResult->message()
+                'message' => $voteResult->message(),
+                'code' => $voteResult->code()
             ]);
 
             // Create reason chain
@@ -100,7 +102,8 @@ final class Rick
                 voter: $voter::class,
                 previous: $because
             );
-            $voteReason->addDecision($voteResult->decision(), $voteResult->message());
+            $voteReason->addDecision($voteResult->decision(), $voteResult->message(), $voteResult->code());
+            $voteReasons[] = $voteReason;
 
             $because = $voteReason;
 
@@ -112,15 +115,30 @@ final class Rick
 
         $finalDecisionResult = $strategy->decide($voteResults);
 
+        $decidingVote = null;
+        if ($finalDecisionResult->isAbstain() === false) {
+            foreach ($voteResults as $index => $voteResult) {
+                if ($voteResult->decision() === $finalDecisionResult->decision()) {
+                    $decidingVote = $voteReasons[$index];
+                    break;
+                }
+            }
+        }
+
         // Update the final reason with the overall decision
         $finalReason = new Reason(
             userId: $userId,
             permission: (string)$to,
             subject: $onThis,
             voter: self::class,
-            previous: $because
+            previous: $because,
+            decidingVote: $decidingVote
         );
-        $finalReason->addDecision($finalDecisionResult->decision(), $finalDecisionResult->message());
+        $finalReason->addDecision(
+            $finalDecisionResult->decision(),
+            $finalDecisionResult->message(),
+            $finalDecisionResult->code() ?? $decidingVote?->code
+        );
         $because = $finalReason;
 
         $isAllowed = $finalDecisionResult->isAllow();
@@ -138,7 +156,8 @@ final class Rick
             'voter_count' => count($voters),
             'voter_decisions' => $voterDecisions,
             'strategy' => $strategy::class,
-            'reason' => $finalDecisionResult->message()
+            'reason' => $finalDecisionResult->message(),
+            'code' => $finalReason->code
         ]);
 
         return $isAllowed;

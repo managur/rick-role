@@ -169,28 +169,48 @@ $config->setStrategy(new AllowWinsStrategy());
 Rick-Role provides detailed information about permission decisions through reason objects:
 
 ```php
-$reasons = null;
-$allowed = $rick->allows(userId: 123, to: 'edit post', onThis: $post, because: $reasons);
+$reason = null;
+$allowed = $rick->allows(userId: 123, to: 'edit post', onThis: $post, because: $reason);
 //--------- More on these ☝️ named parameters later! ---------//
 
-echo $reasons->permission;    // 'edit post'
-echo $reasons->userId;        // 123
-echo $reasons->subject;       // $post object
-echo $reasons->voter;         // Voter class name
-echo $reasons->decision;      // 'ALLOW', 'DENY', or 'ABSTAIN'
-echo $reasons->message;       // Human-readable reason
+echo $reason->permission;    // 'edit post'
+echo $reason->userId;        // 123
+echo $reason->subject;       // $post object
+echo $reason->voter;         // Voter class name
+echo $reason->decision;      // 'ALLOW', 'DENY', or 'ABSTAIN'
+echo $reason->message;       // Human-readable reason
+$reason->code;               // Programmatic code from the deciding vote, or null
+echo $reason->given();       // Message given by the deciding vote
 
 // Access the complete decision chain
-$current = $reasons;
+$current = $reason;
 while ($current) {
     echo "Voter: " . $current->voter . " - " . $current->message;
     $current = $current->previous;
 }
 ```
 
-**Note:** The `$reasons` parameter contains a chain of `Reason` objects, where each object represents a decision from a
+**Note:** The `$reason` parameter contains a chain of `Reason` objects, where each object represents a decision from a
 voter in the stack. The `previous` property links to the previous voter's decision, creating a complete audit trail of
 the permission check.
+
+Voters can attach a code to their vote, so that you can act on why a permission was decided without parsing the
+message. A code can be a string or a backed enum:
+
+```php
+if ($rick->disallows(userId: $userId, to: 'mfa.disable.submit', because: $reason)) {
+    if ($reason->is(MfaReason::Mandatory)) {
+        // Show the control disabled, with an explanation
+    }
+}
+
+// Without named parameters
+if ($rick->disallows($userId, 'mfa.disable.submit', null, $reason)) {
+    if ($reason->wasDecidedBy(MfaVoter::class)) {
+        echo $reason->given();
+    }
+}
+```
 
 ## Configuration
 
@@ -351,7 +371,7 @@ if ($rick->allows($userId, $permission, onThis: $post)) {
 }
 ```
 
-Don't forget that the optional _reasons_ out-parameter is also available on the `because` named argument.
+Don't forget that the optional _reason_ out-parameter is also available on the `because` named argument.
 
 ### Hierarchical Roles
 
@@ -413,6 +433,15 @@ Voters can optionally check the provided `$permission` and `$subject` to see whe
 perform the requested check. If not, they should return a `VoteResult::abstain()` to delegate to a different voter
 within the configured stack.
 
+Voters can also give their vote a code, which is passed through to the reason object:
+
+```php
+return VoteResult::deny('MFA is mandatory, so it cannot be disabled', code: MfaReason::Mandatory);
+
+// Without named parameters
+return VoteResult::deny('MFA is mandatory, so it cannot be disabled', null, MfaReason::Mandatory);
+```
+
 ### Complex Permission Scenarios
 
 It's discouraged to check multiple permissions for a single operation, but we understand that it is sometimes necessary.
@@ -429,14 +458,14 @@ if ($canManageUsers && $canDeleteUsers) {
 ```
 
 You may also wish to perform an action based on the reason why the user was allowed (or denied), which you can do by
-interrogating the out-parameter `$reasons` object in this example:
+interrogating the out-parameter `$reason` object in this example:
 ```php
 // Get detailed reasoning for debugging
-$reasons = null;
-$canEdit = $rick->allows(userId: $userId, to: 'edit post', onThis: $post, because: $reasons);
+$reason = null;
+$canEdit = $rick->allows(userId: $userId, to: 'edit post', onThis: $post, because: $reason);
 
 if ($canEdit === false) {
-    logPermissionDenial($reasons);
+    logPermissionDenial($reason);
 }
 ```
 
@@ -501,27 +530,50 @@ Alias for `disallows()` - alternative reading preference.
 The reason object provides detailed information about permission decisions:
 
 ```php
-$reasons = null;
-$allowed = $rick->allows(userId: 123, to: 'edit post', onThis: $post, because: $reasons);
+$reason = null;
+$allowed = $rick->allows(userId: 123, to: 'edit post', onThis: $post, because: $reason);
 
-echo $reasons->permission;    // 'edit post'
-echo $reasons->userId;        // 123
-echo $reasons->subject;       // $post object
-echo $reasons->voter;         // Voter class name
-echo $reasons->decision;      // 'ALLOW', 'DENY', or 'ABSTAIN'
-echo $reasons->message;       // Human-readable reason
+echo $reason->permission;    // 'edit post'
+echo $reason->userId;        // 123
+echo $reason->subject;       // $post object
+echo $reason->voter;         // Voter class name
+echo $reason->decision;      // 'ALLOW', 'DENY', or 'ABSTAIN'
+echo $reason->message;       // Human-readable reason
+$reason->code;               // Programmatic code from the deciding vote, or null
+echo $reason->given();       // Message given by the deciding vote
 
 // Access the complete decision chain
-$current = $reasons;
+$current = $reason;
 while ($current) {
     echo "Voter: " . $current->voter . " - " . $current->message;
     $current = $current->previous;
 }
 ```
 
-**Note:** The `$reasons` parameter contains a chain of `Reason` objects, where each object represents a decision from a
+**Note:** The `$reason` parameter contains a chain of `Reason` objects, where each object represents a decision from a
 voter in the stack. The `previous` property links to the previous voter's decision, creating a complete audit trail of
 the permission check.
+
+#### `is(string|\BackedEnum $code): bool`
+
+Checks if the deciding vote carried this code. Codes are compared strictly, so a backed enum does not match its own
+string value.
+
+#### `isNot(string|\BackedEnum $code): bool`
+
+The inverse of `is()`.
+
+#### `wasDecidedBy(string $voter): bool`
+
+Checks if this voter class cast the deciding vote. The deciding vote is the first vote that matches the final decision.
+
+#### `wasNotDecidedBy(string $voter): bool`
+
+The inverse of `wasDecidedBy()`.
+
+#### `given(): ?string`
+
+Returns the message given by the deciding vote, or the reason's own message when no vote decided.
 
 ## Permission Parameter Type
 
@@ -594,8 +646,8 @@ $rick->allows(123, 'create post', $post);
 **Log Output Example:**
 
 ```
-[2025-01-15 10:30:45] rick-role.DEBUG: Voter decision {"user_id":123,"permission":"create post","voter":"RickRole\\Voter\\DefaultVoter","decision":"allow","message":"User has permission through role: editor"}
-[2025-01-15 10:30:45] rick-role.INFO: Permission check completed {"user_id":123,"permission":"create post","subject":"Post#123","decision":"allow","allowed":true,"duration_ms":2.45,"voter_count":1,"strategy":"RickRole\\Strategy\\DenyWinsStrategy","reason":"No deny votes found - User has permission through role: editor"}
+[2025-01-15 10:30:45] rick-role.DEBUG: Voter decision {"user_id":123,"permission":"create post","voter":"RickRole\\Voter\\DefaultVoter","decision":"allow","message":"User has permission through role: editor","code":null}
+[2025-01-15 10:30:45] rick-role.INFO: Permission check completed {"user_id":123,"permission":"create post","subject":"Post#123","decision":"allow","allowed":true,"duration_ms":2.45,"voter_count":1,"strategy":"RickRole\\Strategy\\DenyWinsStrategy","reason":"No deny votes found - User has permission through role: editor","code":null}
 ```
 
 **Log Context Fields:**
@@ -605,6 +657,7 @@ $rick->allows(123, 'create post', $post);
   - `voter`
   - `decision`
   - `message`
+  - `code`
 
 - INFO (final "Permission check completed"):
   - `user_id`
@@ -616,6 +669,7 @@ $rick->allows(123, 'create post', $post);
   - `voter_count`
   - `strategy`
   - `reason`
+  - `code`
 
 - Optional (DEBUG aggregate):
   - `voter_decisions`: Array of individual voter decisions

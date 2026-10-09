@@ -31,7 +31,7 @@ final class DenyWinsStrategy implements StrategyInterface
             if ($result->isDeny()) {
                 $denyVote = $result;
                 // In DenyWins strategy, we can return immediately on first deny
-                return VoteResult::deny('Deny wins - ' . $result->message());
+                return VoteResult::deny('Deny wins - ' . $result->message(), code: $result->code());
             } elseif ($result->isAllow() && $allowVote === null) {
                 $allowVote = $result;
             }
@@ -39,7 +39,7 @@ final class DenyWinsStrategy implements StrategyInterface
 
         // ALLOW wins over ABSTAIN
         if ($allowVote !== null) {
-            return VoteResult::allow('No deny votes found - ' . $allowVote->message());
+            return VoteResult::allow('No deny votes found - ' . $allowVote->message(), code: $allowVote->code());
         }
 
         // All abstained - fail secure

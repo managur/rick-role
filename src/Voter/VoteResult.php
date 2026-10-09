@@ -18,32 +18,42 @@ final class VoteResult
     private function __construct(
         private readonly string $result,
         private readonly string $message,
-        private readonly ?VoterInterface $voter = null
+        private readonly ?VoterInterface $voter = null,
+        private readonly string|\BackedEnum|null $code = null
     ) {
     }
 
     /**
      * Create an ALLOW vote result.
      */
-    public static function allow(string $message, ?VoterInterface $voter = null): self
-    {
-        return new self(self::ALLOW, $message, $voter);
+    public static function allow(
+        string $message,
+        ?VoterInterface $voter = null,
+        string|\BackedEnum|null $code = null
+    ): self {
+        return new self(self::ALLOW, $message, $voter, $code);
     }
 
     /**
      * Create a DENY vote result.
      */
-    public static function deny(?string $message = 'Access denied', ?VoterInterface $voter = null): self
-    {
-        return new self(self::DENY, $message ?? 'Access denied', $voter);
+    public static function deny(
+        ?string $message = 'Access denied',
+        ?VoterInterface $voter = null,
+        string|\BackedEnum|null $code = null
+    ): self {
+        return new self(self::DENY, $message ?? 'Access denied', $voter, $code);
     }
 
     /**
      * Create an ABSTAIN vote result.
      */
-    public static function abstain(string $message, ?VoterInterface $voter = null): self
-    {
-        return new self(self::ABSTAIN, $message, $voter);
+    public static function abstain(
+        string $message,
+        ?VoterInterface $voter = null,
+        string|\BackedEnum|null $code = null
+    ): self {
+        return new self(self::ABSTAIN, $message, $voter, $code);
     }
 
     /**
@@ -60,6 +70,14 @@ final class VoteResult
     public function message(): string
     {
         return $this->message;
+    }
+
+    /**
+     * Get the programmatic code for the decision.
+     */
+    public function code(): string|\BackedEnum|null
+    {
+        return $this->code;
     }
 
     /**

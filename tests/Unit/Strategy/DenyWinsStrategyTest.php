@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RickRole\Strategy\DenyWinsStrategy;
+use RickRole\Tests\Unit\Fixture\ReasonCode;
 use RickRole\Voter\VoteResult;
 
 /**
@@ -335,5 +336,39 @@ final class DenyWinsStrategyTest extends TestCase
                 'description' => 'Should stop voting after deny vote'
             ],
         ];
+    }
+
+    #[Test]
+    public function it_keeps_the_code_of_the_deciding_deny_vote(): void
+    {
+        $votes = [
+            VoteResult::allow('Allowed', code: 'role.allow'),
+            VoteResult::deny('Mandatory', code: ReasonCode::Mandatory),
+        ];
+
+        $result = $this->strategy->decide($votes);
+
+        self::assertSame(ReasonCode::Mandatory, $result->code());
+    }
+
+    #[Test]
+    public function it_keeps_the_code_of_the_deciding_allow_vote(): void
+    {
+        $votes = [
+            VoteResult::abstain('Abstained', code: 'no.opinion'),
+            VoteResult::allow('Allowed', code: 'role.allow'),
+        ];
+
+        $result = $this->strategy->decide($votes);
+
+        self::assertSame('role.allow', $result->code());
+    }
+
+    #[Test]
+    public function it_has_no_code_when_all_abstain(): void
+    {
+        $result = $this->strategy->decide([VoteResult::abstain('Abstained', code: 'no.opinion')]);
+
+        self::assertNull($result->code());
     }
 }

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace RickRole\Reason;
 
-use RickRole\Strategy\StrategyInterface;
 use RickRole\Voter\VoterInterface;
 
 /**
@@ -19,6 +18,8 @@ final class Reason
     /** @var array<string> */
     private(set) array $chain = [];
     private(set) ?string $lastDecision = null;
+    private(set) string|\BackedEnum|null $lastCode = null;
+    private ?string $lastMessage = null;
     /** @var array<VoterInterface> */
     private(set) array $voters = [];
 
@@ -37,16 +38,24 @@ final class Reason
                 return $this->message ?? (end($this->chain) ?: null);
             }
         },
-        private(set) ?Reason $previous = null
+        private(set) ?Reason $previous = null,
+        private(set) string|\BackedEnum|null $code = null {
+            get {
+                return $this->code ?? $this->lastCode;
+            }
+        },
+        private readonly ?Reason $decidingVote = null
     ) {
     }
 
     /**
      * Add a decision entry to the chain.
      */
-    public function addDecision(string $decision, string $reason): self
+    public function addDecision(string $decision, string $reason, string|\BackedEnum|null $code = null): self
     {
         $this->lastDecision = $decision;
+        $this->lastCode = $code;
+        $this->lastMessage = $reason;
         $this->chain[] = "[$decision] $reason";
         return $this;
     }
@@ -89,7 +98,47 @@ final class Reason
         return strtoupper($this->lastDecision ?? '') === 'ABSTAIN';
     }
 
+    /**
+     * Check if the reason carries the given code.
+     */
+    public function is(string|\BackedEnum $code): bool
+    {
+        return $this->code === $code;
+    }
 
+    /**
+     * Check if the reason does not carry the given code.
+     */
+    public function isNot(string|\BackedEnum $code): bool
+    {
+        return $this->is($code) === false;
+    }
+
+    /**
+     * Get the message given by the deciding vote.
+     */
+    public function given(): ?string
+    {
+        $given = $this->decidingVote ?? $this;
+
+        return $given->lastMessage ?? $given->message;
+    }
+
+    /**
+     * Check if the given voter cast the deciding vote.
+     */
+    public function wasDecidedBy(string $voter): bool
+    {
+        return $this->decidingVote?->voter === $voter;
+    }
+
+    /**
+     * Check if the given voter did not cast the deciding vote.
+     */
+    public function wasNotDecidedBy(string $voter): bool
+    {
+        return $this->wasDecidedBy($voter) === false;
+    }
 
     /**
      * Convert the reason to a string.
@@ -106,12 +155,13 @@ final class Reason
         );
     }
 
-    /** @return array{chain: array<string|null>, message: ?string, voters: array<VoterInterface>} */
+    /** @return array{chain: array<string|null>, message: ?string, code: string|\BackedEnum|null, voters: array<VoterInterface>} */
     public function getFullTrace(): array
     {
         return [
             'chain' => $this->chain,
             'message' => $this->message,
+            'code' => $this->code,
             'voters' => $this->voters,
         ];
     }

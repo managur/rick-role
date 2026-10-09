@@ -10,6 +10,8 @@ use RickRole\Rick;
 use RickRole\Configuration;
 use RickRole\Reason\Reason;
 use RickRole\Strategy\DenyWinsStrategy;
+use RickRole\Strategy\StrategyInterface;
+use RickRole\Tests\Unit\Fixture\ReasonCode;
 use RickRole\Voter\VoterInterface;
 use RickRole\Voter\VoteResult;
 
@@ -442,5 +444,163 @@ final class RickTest extends TestCase
         }
         $this->assertSame('resource', $method->invoke($rick, $resource));
         fclose($resource);
+    }
+
+    public function testCodeOfDecidingDenyReachesReasonWithDenyWinsStrategy(): void
+    {
+        // Arrange
+        $allowVoter = $this->voterReturning('RickTestRoleVoter', VoteResult::allow('Role allows it', code: 'role.allow'));
+        $mfaVoter = $this->voterReturning('RickTestMfaVoter', VoteResult::deny('MFA is mandatory', code: ReasonCode::Mandatory));
+
+        $config = new Configuration();
+        $config->setVoters([$allowVoter, $mfaVoter]);
+        $rick = new Rick($config);
+        $reason = null;
+
+        // Act
+        $result = $rick->disallows(userId: 123, to: 'mfa.disable.submit', because: $reason);
+
+        // Assert
+        $this->assertTrue($result);
+        $this->assertInstanceOf(Reason::class, $reason);
+        $this->assertSame(ReasonCode::Mandatory, $reason->code);
+        $this->assertTrue($reason->is(ReasonCode::Mandatory));
+        $this->assertTrue($reason->wasDecidedBy($mfaVoter::class));
+        $this->assertTrue($reason->wasNotDecidedBy(Rick::class));
+        $this->assertSame('MFA is mandatory', $reason->given());
+        $this->assertSame('[deny] Deny wins - MFA is mandatory', $reason->message);
+    }
+
+    public function testCodeOfDecidingAllowReachesReasonWithAllowWinsStrategy(): void
+    {
+        // Arrange
+        $denyVoter = $this->voterReturning('RickTestDenyVoter', VoteResult::deny('Role denies it', code: 'role.deny'));
+        $allowVoter = $this->voterReturning('RickTestAllowVoter', VoteResult::allow('Role allows it', code: 'role.allow'));
+
+        $config = new Configuration();
+        $config->setStrategy(new \RickRole\Strategy\AllowWinsStrategy());
+        $config->setVoters([$denyVoter, $allowVoter]);
+        $rick = new Rick($config);
+        $reason = null;
+
+        // Act
+        $result = $rick->allows(123, 'edit post', null, $reason);
+
+        // Assert
+        $this->assertTrue($result);
+        $this->assertInstanceOf(Reason::class, $reason);
+        $this->assertSame('role.allow', $reason->code);
+        $this->assertTrue($reason->wasDecidedBy($allowVoter::class));
+        $this->assertTrue($reason->wasNotDecidedBy($denyVoter::class));
+        $this->assertSame('Role allows it', $reason->given());
+    }
+
+    public function testFirstMatchingVoteDecidesWhenSeveralAllow(): void
+    {
+        // Arrange
+        $firstVoter = $this->voterReturning('RickTestFirstVoter', VoteResult::allow('First allows it', code: 'first.allow'));
+        $secondVoter = $this->voterReturning('RickTestSecondVoter', VoteResult::allow('Second allows it', code: 'second.allow'));
+
+        $config = new Configuration();
+        $config->setVoters([$firstVoter, $secondVoter]);
+        $rick = new Rick($config);
+        $reason = null;
+
+        // Act
+        $rick->allows(123, 'edit post', null, $reason);
+
+        // Assert
+        $this->assertInstanceOf(Reason::class, $reason);
+        $this->assertSame('first.allow', $reason->code);
+        $this->assertTrue($reason->wasDecidedBy($firstVoter::class));
+        $this->assertTrue($reason->wasNotDecidedBy($secondVoter::class));
+    }
+
+    public function testNoVoteDecidesWhenAllAbstain(): void
+    {
+        // Arrange
+        $voter = $this->voterReturning('RickTestAbstainVoter', VoteResult::abstain('Not my permission', code: 'not.mine'));
+
+        $config = new Configuration();
+        $config->addVoter($voter);
+        $rick = new Rick($config);
+        $reason = null;
+
+        // Act
+        $result = $rick->allows(123, 'edit post', null, $reason);
+
+        // Assert
+        $this->assertFalse($result);
+        $this->assertInstanceOf(Reason::class, $reason);
+        $this->assertNull($reason->code);
+        $this->assertTrue($reason->wasNotDecidedBy($voter::class));
+        $this->assertSame('All voters abstained', $reason->given());
+    }
+
+    public function testCodeReachesReasonWhenStrategyDropsIt(): void
+    {
+        // Arrange
+        $strategy = new class implements StrategyInterface {
+            public function decide(array $voteResults): VoteResult
+            {
+                return VoteResult::deny('Custom strategy denies');
+            }
+
+            public function shouldStopVoting(VoteResult $voteResult): bool
+            {
+                return false;
+            }
+        };
+        $voter = $this->voterReturning('RickTestCustomStrategyVoter', VoteResult::deny('MFA is mandatory', code: ReasonCode::Mandatory));
+
+        $config = new Configuration();
+        $config->setStrategy($strategy);
+        $config->addVoter($voter);
+        $rick = new Rick($config);
+        $reason = null;
+
+        // Act
+        $rick->allows(123, 'mfa.disable.submit', null, $reason);
+
+        // Assert
+        $this->assertInstanceOf(Reason::class, $reason);
+        $this->assertSame(ReasonCode::Mandatory, $reason->code);
+        $this->assertTrue($reason->wasDecidedBy($voter::class));
+    }
+
+    public function testCodeOfNestedVoteReachesReason(): void
+    {
+        // Arrange
+        $nestedVoter = new class implements VoterInterface {
+            public function vote(string|int $userId, string|\Stringable $permission, mixed $subject = null): VoteResult
+            {
+                return (new DenyWinsStrategy())->decide([
+                    VoteResult::allow('Role A allows it'),
+                    VoteResult::deny('Role B denies it', code: 'role.deny'),
+                ]);
+            }
+        };
+
+        $config = new Configuration();
+        $config->addVoter($nestedVoter);
+        $rick = new Rick($config);
+        $reason = null;
+
+        // Act
+        $rick->allows(123, 'edit post', null, $reason);
+
+        // Assert
+        $this->assertInstanceOf(Reason::class, $reason);
+        $this->assertSame('role.deny', $reason->code);
+        $this->assertTrue($reason->wasDecidedBy($nestedVoter::class));
+    }
+
+    private function voterReturning(string $className, VoteResult $voteResult): VoterInterface
+    {
+        // @phpstan-ignore-next-line
+        $voter = $this->getMockBuilder(VoterInterface::class)->setMockClassName($className)->getMock();
+        $voter->method('vote')->willReturn($voteResult);
+
+        return $voter;
     }
 }
