@@ -85,6 +85,7 @@ final class CLIBootstrap
 
         // Create ORM configuration
         $config = ORMSetup::createAttributeMetadataConfiguration($paths, $isDevMode);
+        $config->enableNativeLazyObjects(true);
 
         // Create EntityManager
         return new EntityManager(DriverManager::getConnection($dbParams), $config);

@@ -9,6 +9,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use RickRole\CLI\Command\UserCommand;
 use RickRole\Entity\Role;
@@ -22,10 +23,10 @@ use Symfony\Component\Console\Tester\CommandTester;
 final class UserCommandTest extends TestCase
 {
     private EntityManagerInterface $entityManager;
-    /** @var EntityRepository<Role> */
-    private EntityRepository $roleRepository;
-    /** @var EntityRepository<UserRole> */
-    private EntityRepository $userRoleRepository;
+    /** @var EntityRepository<Role>&MockObject */
+    private EntityRepository&MockObject $roleRepository;
+    /** @var EntityRepository<UserRole>&MockObject */
+    private EntityRepository&MockObject $userRoleRepository;
     private UserCommand $command;
     private CommandTester $commandTester;
 
@@ -86,7 +87,6 @@ final class UserCommandTest extends TestCase
     public function testAssignRoleWithNonExistentRole(): void
     {
         // Configure repository to return null (role doesn't exist)
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'non-existent'])
             ->willReturn(null);
@@ -110,13 +110,11 @@ final class UserCommandTest extends TestCase
         $role = $this->createMock(Role::class);
 
         // Configure role repository to return the role
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'admin'])
             ->willReturn($role);
 
         // Configure user role repository to return existing assignment
-        /** @phpstan-ignore-next-line */
         $this->userRoleRepository->method('findOneBy')
             ->with([
                 'userId' => 'user123',
@@ -143,13 +141,11 @@ final class UserCommandTest extends TestCase
         $role = $this->createMock(Role::class);
 
         // Configure role repository to return the role
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'admin'])
             ->willReturn($role);
 
         // Configure user role repository to return null (no existing assignment)
-        /** @phpstan-ignore-next-line */
         $this->userRoleRepository->method('findOneBy')
             ->with([
                 'userId' => 'user123',
@@ -178,13 +174,11 @@ final class UserCommandTest extends TestCase
         $role->method('name')->willReturn('admin');
 
         // Configure role repository to return the role
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'admin'])
             ->willReturn($role);
 
         // Configure user role repository to return null (no existing assignment)
-        /** @phpstan-ignore-next-line */
         $this->userRoleRepository->method('findOneBy')
             ->with([
                 'userId' => 'user123',
@@ -213,13 +207,11 @@ final class UserCommandTest extends TestCase
         $role->method('name')->willReturn('admin');
 
         // Configure role repository to return the role
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'admin'])
             ->willReturn($role);
 
         // Configure user role repository to return null (no existing assignment)
-        /** @phpstan-ignore-next-line */
         $this->userRoleRepository->method('findOneBy')
             ->with([
                 'userId' => 'user123',
@@ -272,7 +264,6 @@ final class UserCommandTest extends TestCase
     public function testRemoveRoleWithNonExistentRole(): void
     {
         // Configure repository to return null (role doesn't exist)
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'non-existent'])
             ->willReturn(null);
@@ -297,13 +288,11 @@ final class UserCommandTest extends TestCase
         $role->method('name')->willReturn('admin');
 
         // Configure role repository to return the role
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'admin'])
             ->willReturn($role);
 
         // Configure user role repository to return null (no assignment)
-        /** @phpstan-ignore-next-line */
         $this->userRoleRepository->method('findOneBy')
             ->with([
                 'userId' => 'user123',
@@ -334,13 +323,11 @@ final class UserCommandTest extends TestCase
         $userRole = $this->createMock(UserRole::class);
 
         // Configure role repository to return the role
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'admin'])
             ->willReturn($role);
 
         // Configure user role repository to return the assignment
-        /** @phpstan-ignore-next-line */
         $this->userRoleRepository->method('findOneBy')
             ->with([
                 'userId' => 'user123',
@@ -377,7 +364,6 @@ final class UserCommandTest extends TestCase
     public function testShowUserRolesWithNoRoles(): void
     {
         // Configure user role repository to return empty array
-        /** @phpstan-ignore-next-line */
         $this->userRoleRepository->method('findBy')
             ->with(['userId' => 'user123'])
             ->willReturn([]);
@@ -427,7 +413,6 @@ final class UserCommandTest extends TestCase
         ]);
 
         // Configure user role repository to return user roles
-        /** @phpstan-ignore-next-line */
         $this->userRoleRepository->method('findBy')
             ->with(['userId' => 'user123'])
             ->willReturn([$userRole1, $userRole2]);
@@ -468,7 +453,6 @@ final class UserCommandTest extends TestCase
     public function testShowRoleUsersWithNonExistentRole(): void
     {
         // Configure repository to return null (role doesn't exist)
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'non-existent'])
             ->willReturn(null);
@@ -495,7 +479,6 @@ final class UserCommandTest extends TestCase
         ]);
 
         // Configure repository to return the role
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'empty-role'])
             ->willReturn($role);
@@ -541,7 +524,6 @@ final class UserCommandTest extends TestCase
         ]);
 
         // Configure repository to return the role
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'admin'])
             ->willReturn($role);

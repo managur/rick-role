@@ -44,6 +44,7 @@ $isDevMode = ($_ENV['APP_ENV'] ?? 'dev') === 'dev';
 
 // Create ORM configuration
 $config = ORMSetup::createAttributeMetadataConfiguration($paths, $isDevMode);
+$config->enableNativeLazyObjects(true);
 
 // Create EntityManager
 $entityManager = new EntityManager(DriverManager::getConnection($dbParams), $config);

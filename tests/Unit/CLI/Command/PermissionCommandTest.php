@@ -7,6 +7,7 @@ namespace RickRole\Tests\Unit\CLI\Command;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use RickRole\CLI\Command\PermissionCommand;
 use RickRole\Entity\Role;
@@ -19,8 +20,8 @@ use Symfony\Component\Console\Tester\CommandTester;
 final class PermissionCommandTest extends TestCase
 {
     private EntityManagerInterface $entityManager;
-    /** @var EntityRepository<Role> */
-    private EntityRepository $roleRepository;
+    /** @var EntityRepository<Role>&MockObject */
+    private EntityRepository&MockObject $roleRepository;
     private PermissionCommand $command;
     private CommandTester $commandTester;
 
@@ -46,7 +47,6 @@ final class PermissionCommandTest extends TestCase
     public function testRoleNotFound(): void
     {
         // Configure repository to return null (role doesn't exist)
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'non-existent'])
             ->willReturn(null);
@@ -72,7 +72,6 @@ final class PermissionCommandTest extends TestCase
         ]);
 
         // Configure repository to return the role
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'empty-role'])
             ->willReturn($role);
@@ -101,7 +100,6 @@ final class PermissionCommandTest extends TestCase
         ]);
 
         // Configure repository to return the role
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'admin'])
             ->willReturn($role);
@@ -130,7 +128,6 @@ final class PermissionCommandTest extends TestCase
         ]);
 
         // Configure repository to return the role
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'admin'])
             ->willReturn($role);
@@ -156,7 +153,6 @@ final class PermissionCommandTest extends TestCase
         ]);
 
         // Configure repository to return the role
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'admin'])
             ->willReturn($role);
@@ -183,7 +179,6 @@ final class PermissionCommandTest extends TestCase
         ]);
 
         // Configure repository to return the role
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'admin'])
             ->willReturn($role);
@@ -215,7 +210,6 @@ final class PermissionCommandTest extends TestCase
             ->with('create');
 
         // Configure repository to return the role
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'admin'])
             ->willReturn($role);
@@ -247,7 +241,6 @@ final class PermissionCommandTest extends TestCase
             ->with('delete');
 
         // Configure repository to return the role
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'admin'])
             ->willReturn($role);
@@ -274,7 +267,6 @@ final class PermissionCommandTest extends TestCase
         ]);
 
         // Configure repository to return the role
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'admin'])
             ->willReturn($role);
@@ -300,7 +292,6 @@ final class PermissionCommandTest extends TestCase
         ]);
 
         // Configure repository to return the role
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'admin'])
             ->willReturn($role);
@@ -331,7 +322,6 @@ final class PermissionCommandTest extends TestCase
             ->with('create');
 
         // Configure repository to return the role
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'admin'])
             ->willReturn($role);
@@ -357,7 +347,6 @@ final class PermissionCommandTest extends TestCase
         ]);
 
         // Configure repository to return the role
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'admin'])
             ->willReturn($role);
@@ -383,7 +372,6 @@ final class PermissionCommandTest extends TestCase
         ]);
 
         // Configure repository to return the role
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'admin'])
             ->willReturn($role);
@@ -415,7 +403,6 @@ final class PermissionCommandTest extends TestCase
             ->with('create');
 
         // Configure repository to return the role
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'admin'])
             ->willReturn($role);
@@ -447,7 +434,6 @@ final class PermissionCommandTest extends TestCase
             ->with('delete');
 
         // Configure repository to return the role
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'admin'])
             ->willReturn($role);
@@ -473,7 +459,6 @@ final class PermissionCommandTest extends TestCase
         ]);
 
         // Configure repository to return the role
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'admin'])
             ->willReturn($role);
@@ -502,7 +487,6 @@ final class PermissionCommandTest extends TestCase
             ->with('create');
 
         // Configure repository to return the role
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'admin'])
             ->willReturn($role);
@@ -528,7 +512,6 @@ final class PermissionCommandTest extends TestCase
         ]);
 
         // Configure repository to return the role
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'admin'])
             ->willReturn($role);
@@ -557,7 +540,6 @@ final class PermissionCommandTest extends TestCase
             ->with('delete');
 
         // Configure repository to return the role
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'admin'])
             ->willReturn($role);
@@ -583,7 +565,6 @@ final class PermissionCommandTest extends TestCase
         ]);
 
         // Configure repository to return the role
-        /** @phpstan-ignore-next-line */
         $this->roleRepository->method('findOneBy')
             ->with(['name' => 'admin'])
             ->willReturn($role);

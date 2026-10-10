@@ -235,6 +235,7 @@ final class ConfigurationTest extends TestCase
         // Modifying returned array should not affect configuration
         $voters[] = $this->createMock(VoterInterface::class);
 
+        self::assertCount($originalCount + 1, $voters);
         self::assertCount($originalCount, $this->configuration->voters());
     }
 
