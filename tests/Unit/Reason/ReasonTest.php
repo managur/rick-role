@@ -9,6 +9,8 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RickRole\Reason\Reason;
 use RickRole\Tests\Unit\Fixture\ReasonCode;
+use RickRole\Voter\Example\IpAddressVoter;
+use RickRole\Voter\Example\TimeBasedVoter;
 use RickRole\Exception\ConfigurationException;
 
 /**
@@ -677,13 +679,13 @@ final class ReasonTest extends TestCase
     #[Test]
     public function it_knows_which_voter_decided(): void
     {
-        $decidingVote = new Reason(123, 'test', null, 'MfaVoter', 'DENY', 'MFA is mandatory');
+        $decidingVote = new Reason(123, 'test', null, IpAddressVoter::class, 'DENY', 'MFA is mandatory');
         $reason = new Reason(123, 'test', null, 'Rick', 'DENY', 'Deny wins - MFA is mandatory', decidingVote: $decidingVote);
 
-        self::assertTrue($reason->wasDecidedBy('MfaVoter'));
-        self::assertFalse($reason->wasDecidedBy('Rick'));
-        self::assertFalse($reason->wasNotDecidedBy('MfaVoter'));
-        self::assertTrue($reason->wasNotDecidedBy('Rick'));
+        self::assertTrue($reason->wasDecidedBy(IpAddressVoter::class));
+        self::assertFalse($reason->wasDecidedBy(TimeBasedVoter::class));
+        self::assertFalse($reason->wasNotDecidedBy(IpAddressVoter::class));
+        self::assertTrue($reason->wasNotDecidedBy(TimeBasedVoter::class));
         self::assertSame('MFA is mandatory', $reason->given());
     }
 
@@ -692,8 +694,8 @@ final class ReasonTest extends TestCase
     {
         $reason = new Reason(123, 'test', null, 'Rick', 'ABSTAIN', 'All voters abstained');
 
-        self::assertFalse($reason->wasDecidedBy('Rick'));
-        self::assertTrue($reason->wasNotDecidedBy('Rick'));
+        self::assertFalse($reason->wasDecidedBy(IpAddressVoter::class));
+        self::assertTrue($reason->wasNotDecidedBy(IpAddressVoter::class));
         self::assertSame('All voters abstained', $reason->given());
     }
 

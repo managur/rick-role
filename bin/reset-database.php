@@ -47,6 +47,7 @@ $isDevMode = (($_ENV['APP_ENV'] ?? 'dev') === 'dev');
 
 // Create ORM configuration
 $config = ORMSetup::createAttributeMetadataConfiguration($paths, $isDevMode);
+$config->enableNativeLazyObjects(true);
 
 // Create EntityManager
 $entityManager = new EntityManager(DriverManager::getConnection($dbParams), $config);
@@ -70,7 +71,7 @@ try {
     $tableName = $migrationsConfig['table_storage']['table_name'] ?? 'doctrine_migration_versions';
     $connection = $entityManager->getConnection();
     $platform = $connection->getDatabasePlatform();
-    $dropSql = 'DROP TABLE IF EXISTS ' . $platform->quoteIdentifier((string) $tableName);
+    $dropSql = 'DROP TABLE IF EXISTS ' . $platform->quoteSingleIdentifier((string) $tableName);
     echo sprintf("Dropping migrations table '%s'...\n", (string) $tableName);
     $connection->executeStatement($dropSql);
     echo "Migrations table dropped.\n";

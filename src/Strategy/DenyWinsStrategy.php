@@ -24,12 +24,10 @@ final class DenyWinsStrategy implements StrategyInterface
             return VoteResult::abstain('No votes provided');
         }
 
-        $denyVote = null;
         $allowVote = null;
 
         foreach ($voteResults as $result) {
             if ($result->isDeny()) {
-                $denyVote = $result;
                 // In DenyWins strategy, we can return immediately on first deny
                 return VoteResult::deny('Deny wins - ' . $result->message(), code: $result->code());
             } elseif ($result->isAllow() && $allowVote === null) {

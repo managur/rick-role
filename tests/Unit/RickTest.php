@@ -466,7 +466,7 @@ final class RickTest extends TestCase
         $this->assertSame(ReasonCode::Mandatory, $reason->code);
         $this->assertTrue($reason->is(ReasonCode::Mandatory));
         $this->assertTrue($reason->wasDecidedBy($mfaVoter::class));
-        $this->assertTrue($reason->wasNotDecidedBy(Rick::class));
+        $this->assertTrue($reason->wasNotDecidedBy($allowVoter::class));
         $this->assertSame('MFA is mandatory', $reason->given());
         $this->assertSame('[deny] Deny wins - MFA is mandatory', $reason->message);
     }

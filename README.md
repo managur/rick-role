@@ -566,6 +566,8 @@ The inverse of `is()`.
 #### `wasDecidedBy(string $voter): bool`
 
 Checks if this voter class cast the deciding vote. The deciding vote is the first vote that matches the final decision.
+Only the reason returned through `because` knows the deciding vote, so calling this on an earlier reason in the
+`previous` chain always returns `false`.
 
 #### `wasNotDecidedBy(string $voter): bool`
 
@@ -573,7 +575,8 @@ The inverse of `wasDecidedBy()`.
 
 #### `given(): ?string`
 
-Returns the message given by the deciding vote, or the reason's own message when no vote decided.
+Returns the message given by the deciding vote, or the reason's own message when no vote decided. On an earlier reason
+in the `previous` chain, this is that voter's own message.
 
 ## Permission Parameter Type
 

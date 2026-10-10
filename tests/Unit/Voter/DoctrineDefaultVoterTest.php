@@ -8,6 +8,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository; // @template T
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use RickRole\Entity\Role;
 use RickRole\Entity\UserRole;
@@ -20,8 +21,8 @@ use RickRole\Voter\VoteResult;
  */
 final class DoctrineDefaultVoterTest extends TestCase
 {
-    /** @var EntityRepository<UserRole> */
-    private EntityRepository $userRoleRepository;
+    /** @var EntityRepository<UserRole>&MockObject */
+    private EntityRepository&MockObject $userRoleRepository;
     private DoctrineDefaultVoter $voter;
 
     protected function setUp(): void
@@ -61,7 +62,6 @@ final class DoctrineDefaultVoterTest extends TestCase
     #[Test]
     public function it_denies_when_user_not_found(): void
     {
-        /** @phpstan-ignore-next-line */
         $this->userRoleRepository
             ->method('findBy')
             ->with(['userId' => '123'])
@@ -80,7 +80,6 @@ final class DoctrineDefaultVoterTest extends TestCase
         $role->allowPermission('read');
         $userRole = new UserRole('123', $role);
 
-        /** @phpstan-ignore-next-line */
         $this->userRoleRepository
             ->method('findBy')
             ->with(['userId' => '123'])
@@ -99,7 +98,6 @@ final class DoctrineDefaultVoterTest extends TestCase
         $role->denyPermission('admin');
         $userRole = new UserRole('123', $role);
 
-        /** @phpstan-ignore-next-line */
         $this->userRoleRepository
             ->method('findBy')
             ->with(['userId' => '123'])
@@ -118,7 +116,6 @@ final class DoctrineDefaultVoterTest extends TestCase
         // No permissions added to role
         $userRole = new UserRole('123', $role);
 
-        /** @phpstan-ignore-next-line */
         $this->userRoleRepository
             ->method('findBy')
             ->with(['userId' => '123'])
@@ -142,7 +139,6 @@ final class DoctrineDefaultVoterTest extends TestCase
         $userRole1 = new UserRole('123', $userRole);
         $userRole2 = new UserRole('123', $editorRole);
 
-        /** @phpstan-ignore-next-line */
         $this->userRoleRepository
             ->method('findBy')
             ->with(['userId' => '123'])
@@ -163,7 +159,6 @@ final class DoctrineDefaultVoterTest extends TestCase
         $role = new Role('user');
         $userRole = new UserRole('123', $role);
 
-        /** @phpstan-ignore-next-line */
         $this->userRoleRepository
             ->method('findBy')
             ->with(['userId' => '123'])
@@ -181,7 +176,6 @@ final class DoctrineDefaultVoterTest extends TestCase
         $role->allowPermission('read');
         $userRole = new UserRole('123', $role);
 
-        /** @phpstan-ignore-next-line */
         $this->userRoleRepository
             ->method('findBy')
             ->with(['userId' => '123'])
@@ -216,7 +210,6 @@ final class DoctrineDefaultVoterTest extends TestCase
         $role->denyPermission('delete');  // User has 'delete' denied
         $userRole = new UserRole('123', $role);
 
-        /** @phpstan-ignore-next-line */
         $this->userRoleRepository
             ->method('findBy')
             ->with(['userId' => '123'])
@@ -241,7 +234,6 @@ final class DoctrineDefaultVoterTest extends TestCase
 
         $userRole = new UserRole('admin-user', $role);
 
-        /** @phpstan-ignore-next-line */
         $this->userRoleRepository
             ->method('findBy')
             ->with(['userId' => 'admin-user'])
@@ -265,7 +257,6 @@ final class DoctrineDefaultVoterTest extends TestCase
     {
         $role = new Role('user');
         $userRole = new UserRole('123', $role);
-        /** @phpstan-ignore-next-line */
         $this->userRoleRepository
             ->method('findBy')
             ->with(['userId' => '123'])
@@ -283,7 +274,6 @@ final class DoctrineDefaultVoterTest extends TestCase
         $role->allowPermission('READ'); // Uppercase
         $userRole = new UserRole('123', $role);
 
-        /** @phpstan-ignore-next-line */
         $this->userRoleRepository
             ->method('findBy')
             ->with(['userId' => '123'])
@@ -304,7 +294,6 @@ final class DoctrineDefaultVoterTest extends TestCase
 
         $userRole = new UserRole('123', $role);
 
-        /** @phpstan-ignore-next-line */
         $this->userRoleRepository
             ->method('findBy')
             ->with(['userId' => '123'])
@@ -325,13 +314,11 @@ final class DoctrineDefaultVoterTest extends TestCase
             $role->allowPermission($permission);
             $userRole = new UserRole((string)$userId, $role);
 
-            /** @phpstan-ignore-next-line */
             $this->userRoleRepository
                 ->method('findBy')
                 ->with(['userId' => (string)$userId])
                 ->willReturn([$userRole]);
         } else {
-            /** @phpstan-ignore-next-line */
             $this->userRoleRepository
                 ->method('findBy')
                 ->with(['userId' => (string)$userId])
@@ -363,7 +350,6 @@ final class DoctrineDefaultVoterTest extends TestCase
     {
         $role = new Role('user');
         $userRole = new UserRole('123', $role);
-        /** @phpstan-ignore-next-line */
         $this->userRoleRepository
             ->method('findBy')
             ->with(['userId' => '123'])
@@ -391,7 +377,6 @@ final class DoctrineDefaultVoterTest extends TestCase
         $expiredUserRole->method('isValid')->willReturn(false);
         $expiredUserRole->method('getRole')->willReturn($role);
 
-        /** @phpstan-ignore-next-line */
         $this->userRoleRepository
             ->method('findBy')
             ->with(['userId' => 'expired-user'])
@@ -411,7 +396,6 @@ final class DoctrineDefaultVoterTest extends TestCase
         $role->setPermissions(['read' => 'MAYBE']);
         $userRole = new \RickRole\Entity\UserRole('123', $role);
 
-        /** @phpstan-ignore-next-line */
         $this->userRoleRepository
             ->method('findBy')
             ->with(['userId' => '123'])
@@ -445,7 +429,6 @@ final class DoctrineDefaultVoterTest extends TestCase
         $userRoleA = new UserRole('user123', $roleA);
 
         // Mock the repository to return our user roles
-        /** @phpstan-ignore-next-line */
         $this->userRoleRepository
             ->method('findBy')
             ->with(['userId' => 'user123'])
@@ -480,7 +463,6 @@ final class DoctrineDefaultVoterTest extends TestCase
         $userRoleA = new UserRole('user123', $roleA);
 
         // Mock the repository to return our user roles
-        /** @phpstan-ignore-next-line */
         $this->userRoleRepository
             ->method('findBy')
             ->with(['userId' => 'user123'])

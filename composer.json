@@ -14,7 +14,7 @@
         "php": "^8.4",
         "doctrine/dbal": "^4.0",
         "doctrine/migrations": "^3.8",
-        "doctrine/orm": "^3.0",
+        "doctrine/orm": "^3.4",
         "psr/log": "^3.0",
         "ramsey/uuid": "^4.7",
         "ramsey/uuid-doctrine": "^2.1",

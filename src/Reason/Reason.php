@@ -126,6 +126,8 @@ final class Reason
 
     /**
      * Check if the given voter cast the deciding vote.
+     *
+     * @param class-string<VoterInterface> $voter
      */
     public function wasDecidedBy(string $voter): bool
     {
@@ -134,6 +136,8 @@ final class Reason
 
     /**
      * Check if the given voter did not cast the deciding vote.
+     *
+     * @param class-string<VoterInterface> $voter
      */
     public function wasNotDecidedBy(string $voter): bool
     {
