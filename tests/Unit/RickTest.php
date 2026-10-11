@@ -630,6 +630,31 @@ final class RickTest extends TestCase
         );
     }
 
+    #[DataProvider('voterOrders')]
+    public function testHasCodeOfAnAbstainingVoteWhateverTheVoterOrder(bool $mfaFirst): void
+    {
+        // Arrange
+        $suffix = $mfaFirst ? 'MfaFirst' : 'RoleFirst';
+        $roleVoter = $this->voterReturning('RickTestAbstainRoleVoter' . $suffix, VoteResult::allow('Role allows it', code: 'signed_in'));
+        $mfaVoter = $this->voterReturning('RickTestAbstainMfaVoter' . $suffix, VoteResult::abstain('MFA is off, so only cleanup', code: ReasonCode::Cleanup));
+
+        $config = new Configuration();
+        $config->setVoters($mfaFirst ? [$mfaVoter, $roleVoter] : [$roleVoter, $mfaVoter]);
+        $rick = new Rick($config);
+        $reason = null;
+
+        // Act
+        $result = $rick->allows(userId: 123, to: 'mfa.disable.submit', because: $reason);
+
+        // Assert
+        $this->assertTrue($result);
+        $this->assertInstanceOf(Reason::class, $reason);
+        $this->assertTrue($reason->wasDecidedBy($roleVoter::class));
+        $this->assertTrue($reason->is('signed_in'));
+        $this->assertTrue($reason->isNot(ReasonCode::Cleanup));
+        $this->assertTrue($reason->has(ReasonCode::Cleanup));
+    }
+
     public function testHasCodeOfCodedAllowAfterUncodedAllow(): void
     {
         // Arrange

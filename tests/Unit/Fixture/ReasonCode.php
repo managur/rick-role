@@ -11,4 +11,5 @@ enum ReasonCode: string
 {
     case Mandatory = 'mandatory';
     case Expired = 'expired';
+    case Cleanup = 'cleanup';
 }

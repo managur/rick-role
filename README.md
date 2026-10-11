@@ -278,10 +278,14 @@ the order, use `has()`:
 ```php
 if ($rick->allows(userId: $userId, to: 'mfa.disable.submit', because: $reason)) {
     if ($reason->has(MfaReason::Cleanup)) {
-        // MfaVoter allowed this for cleanup, even if another voter allowed it first
+        // MfaVoter gave the Cleanup code, whatever the order of the voters
     }
 }
 ```
+
+A code counts whether its vote allowed, denied or abstained. So a voter can explain a decision without making it: here,
+`MfaVoter` can abstain with `MfaReason::Cleanup`, which leaves the role voter to decide access while still letting the
+page show why.
 
 Voting stops early when the strategy has reached a decision that cannot change: on the first deny with
 `DenyWinsStrategy`, and on the first allow with `AllowWinsStrategy`. Voters after that point never vote, so `has()` can't
@@ -652,7 +656,8 @@ is true for a code, `has()` is too.
 
 #### `hasNot(string|\BackedEnum $code): bool`
 
-The inverse of `has()`.
+The inverse of `has()`. If voting stopped early, a voter that did not vote might have given the code, so `hasNot()` is
+only certain when `wasComplete()` is true.
 
 #### `codes(): list<string|\BackedEnum>`
 

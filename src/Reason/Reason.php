@@ -97,6 +97,9 @@ final readonly class Reason
 
     /**
      * Check if neither the final code nor the code of any vote in this decision is the given code.
+     *
+     * If voting stopped early, a voter that did not vote might have given the code, so this is only certain when
+     * wasComplete() is true.
      */
     public function hasNot(string|\BackedEnum $code): bool
     {
