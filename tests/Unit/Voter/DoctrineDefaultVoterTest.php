@@ -403,6 +403,7 @@ final class DoctrineDefaultVoterTest extends TestCase
 
         $result = $this->voter->vote('123', 'read');
 
+        // No role decided, so the voter leaves the permission to other voters
         self::assertTrue($result->isAbstain());
         self::assertStringContainsString('All voters abstained', $result->message());
     }
