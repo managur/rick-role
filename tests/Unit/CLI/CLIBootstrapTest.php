@@ -176,4 +176,22 @@ final class CLIBootstrapTest extends TestCase
         $result3 = $method->invokeArgs(null, []);
         self::assertEquals('pdo_mysql', $result3); // Should return default
     }
+
+    #[Test]
+    public function testCreateApplicationLoadsEnvFileFromTheGivenDirectory(): void
+    {
+        $directory = sys_get_temp_dir() . '/rick-role-env-' . bin2hex(random_bytes(4));
+        mkdir($directory);
+        file_put_contents($directory . '/.env', "RICK_ROLE_TEST_ENV=loaded\n");
+
+        try {
+            CLIBootstrap::createApplication($directory);
+
+            self::assertSame('loaded', $_ENV['RICK_ROLE_TEST_ENV'] ?? null);
+        } finally {
+            unset($_ENV['RICK_ROLE_TEST_ENV'], $_SERVER['RICK_ROLE_TEST_ENV']);
+            unlink($directory . '/.env');
+            rmdir($directory);
+        }
+    }
 }

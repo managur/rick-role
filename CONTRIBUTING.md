@@ -428,7 +428,7 @@ make memory-check      # Check memory usage
 - Repository: managur/rick-role
 - Main class: Rick (final class)
 - Contact: developers@managur.io
-- Domain: managur.com
+- Domain: managur.io
 - All development in Docker containers
 - 100% test coverage requirement
 - Current documentation requirement

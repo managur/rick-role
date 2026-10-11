@@ -6,6 +6,10 @@ namespace RickRole;
 
 use RickRole\Exception\ConfigurationException;
 use RickRole\Reason\Reason;
+use RickRole\Reason\Vote;
+use RickRole\Strategy\Decision;
+use RickRole\Strategy\StrategyInterface;
+use RickRole\Voter\VoteResult;
 
 /**
  * The main Rick-Role client for checking permissions.
@@ -66,46 +70,28 @@ final class Rick
         $startTime = microtime(true);
         $voters = $this->configuration->voters();
         $logger = $this->configuration->logger();
-
-
-
         $strategy = $this->configuration->strategy();
+
+        /** @var list<VoteResult> $voteResults */
         $voteResults = [];
-        $voteReasons = [];
-        $voterDecisions = [];
+        /** @var list<Vote> $votes */
+        $votes = [];
 
         foreach ($voters as $voter) {
             $voteResult = $voter->vote($userId, $to, $onThis);
+            $vote = Vote::cast($voter, $voteResult);
             $voteResults[] = $voteResult;
-
-            $voterDecisions[] = [
-                'voter' => $voter::class,
-                'decision' => $voteResult->decision(),
-                'message' => $voteResult->message()
-            ];
+            $votes[] = $vote;
 
             // Log individual voter decisions at DEBUG level
             $logger->debug('Voter decision', [
                 'user_id' => $userId,
                 'permission' => (string)$to,
-                'voter' => $voter::class,
-                'decision' => $voteResult->decision(),
-                'message' => $voteResult->message(),
-                'code' => $voteResult->code()
+                'voter' => $vote->voter,
+                'decision' => $vote->decision,
+                'message' => $vote->message,
+                'code' => $vote->code
             ]);
-
-            // Create reason chain
-            $voteReason = new Reason(
-                userId: $userId,
-                permission: (string)$to,
-                subject: $onThis,
-                voter: $voter::class,
-                previous: $because
-            );
-            $voteReason->addDecision($voteResult->decision(), $voteResult->message(), $voteResult->code());
-            $voteReasons[] = $voteReason;
-
-            $because = $voteReason;
 
             // Apply strategy-specific logic
             if ($strategy->shouldStopVoting($voteResult)) {
@@ -113,35 +99,22 @@ final class Rick
             }
         }
 
-        $finalDecisionResult = $strategy->decide($voteResults);
+        $decision = $strategy->decide($voteResults);
+        $decidingVote = $this->decidingVote($decision, $voteResults, $votes, $strategy);
 
-        $decidingVote = null;
-        if ($finalDecisionResult->isAbstain() === false) {
-            foreach ($voteResults as $index => $voteResult) {
-                if ($voteResult->decision() === $finalDecisionResult->decision()) {
-                    $decidingVote = $voteReasons[$index];
-                    break;
-                }
-            }
-        }
-
-        // Update the final reason with the overall decision
-        $finalReason = new Reason(
+        $because = new Reason(
             userId: $userId,
             permission: (string)$to,
             subject: $onThis,
-            voter: self::class,
-            previous: $because,
-            decidingVote: $decidingVote
+            decision: $decision->result->decision(),
+            message: $decision->result->message(),
+            code: $decision->result->code(),
+            votes: $votes,
+            decidingVote: $decidingVote,
+            complete: count($votes) === count($voters)
         );
-        $finalReason->addDecision(
-            $finalDecisionResult->decision(),
-            $finalDecisionResult->message(),
-            $finalDecisionResult->code() ?? $decidingVote?->code
-        );
-        $because = $finalReason;
 
-        $isAllowed = $finalDecisionResult->isAllow();
+        $isAllowed = $because->isAllow();
         $duration = $this->calculateDuration($startTime);
 
         // Log final decision at INFO or WARNING level
@@ -150,14 +123,14 @@ final class Rick
             'user_id' => $userId,
             'permission' => (string)$to,
             'subject' => $this->formatSubject($onThis),
-            'decision' => $finalDecisionResult->decision(),
+            'decision' => $because->decision,
             'allowed' => $isAllowed,
             'duration_ms' => $duration,
             'voter_count' => count($voters),
-            'voter_decisions' => $voterDecisions,
+            'voter_decisions' => $because->toArray()['votes'],
             'strategy' => $strategy::class,
-            'reason' => $finalDecisionResult->message(),
-            'code' => $finalReason->code
+            'reason' => $because->message,
+            'code' => $because->code
         ]);
 
         return $isAllowed;
@@ -216,6 +189,31 @@ final class Rick
         ?Reason &$because = null
     ): bool {
         return $this->disallows($userId, $to, $onThis, $because);
+    }
+
+    /**
+     * Find the vote that the strategy says decided, if any.
+     *
+     * @param list<VoteResult> $voteResults
+     * @param list<Vote> $votes
+     * @throws \LogicException If the strategy decided by a vote that was not cast in this check
+     */
+    private function decidingVote(Decision $decision, array $voteResults, array $votes, StrategyInterface $strategy): ?Vote
+    {
+        if ($decision->hasNoDecidingVote()) {
+            return null;
+        }
+
+        $index = array_search($decision->decidingVote, $voteResults, true);
+
+        if ($index === false) {
+            throw new \LogicException(sprintf(
+                '%s decided by a vote that was not cast in this check; pass one of the vote results it was given',
+                $strategy::class
+            ));
+        }
+
+        return $votes[$index];
     }
 
     /**

@@ -4,102 +4,63 @@ declare(strict_types=1);
 
 namespace RickRole\Reason;
 
+use RickRole\Rick;
 use RickRole\Voter\VoterInterface;
+use RickRole\Voter\VoteResult;
 
 /**
- * Represents the reason for a permission decision.
+ * Explains a permission decision made by Rick.
  *
- * This class provides detailed information about why a permission was granted
- * or denied, including which voter made the decision and supports chaining
- * like PHP exceptions.
+ * A reason holds the final decision, which always allows or denies, and every vote that was cast to reach it, in
+ * vote order.
  */
-final class Reason
+final readonly class Reason
 {
-    /** @var array<string> */
-    private(set) array $chain = [];
-    private(set) ?string $lastDecision = null;
-    private(set) string|\BackedEnum|null $lastCode = null;
-    private ?string $lastMessage = null;
-    /** @var array<VoterInterface> */
-    private(set) array $voters = [];
-
+    /**
+     * @param string $decision Either VoteResult::ALLOW or VoteResult::DENY
+     * @param string $message The message given by the strategy for the final decision
+     * @param string|\BackedEnum|null $code The final code: the deciding vote's code, or the strategy's own code
+     * @param list<Vote> $votes Every vote cast in this decision, in vote order
+     * @param Vote|null $decidingVote The vote that decided, or null when the strategy decided by itself
+     * @param bool $complete Whether every configured voter voted
+     */
     public function __construct(
-        private(set) string|int $userId,
-        private(set) string $permission,
-        private(set) mixed $subject = null,
-        private(set) ?string $voter = null,
-        private(set) ?string $decision = null {
-            get {
-                return $this->decision ?? $this->lastDecision;
-            }
-        },
-        private(set) ?string $message = null {
-            get {
-                return $this->message ?? (end($this->chain) ?: null);
-            }
-        },
-        private(set) ?Reason $previous = null,
-        private(set) string|\BackedEnum|null $code = null {
-            get {
-                return $this->code ?? $this->lastCode;
-            }
-        },
-        private readonly ?Reason $decidingVote = null
+        public string|int $userId,
+        public string $permission,
+        public mixed $subject,
+        public string $decision,
+        public string $message,
+        public string|\BackedEnum|null $code = null,
+        public array $votes = [],
+        public ?Vote $decidingVote = null,
+        private bool $complete = true
     ) {
+        if ($decision !== VoteResult::ALLOW && $decision !== VoteResult::DENY) {
+            throw new \InvalidArgumentException(sprintf('A reason must allow or deny, not "%s"', $decision));
+        }
     }
 
     /**
-     * Add a decision entry to the chain.
-     */
-    public function addDecision(string $decision, string $reason, string|\BackedEnum|null $code = null): self
-    {
-        $this->lastDecision = $decision;
-        $this->lastCode = $code;
-        $this->lastMessage = $reason;
-        $this->chain[] = "[$decision] $reason";
-        return $this;
-    }
-
-    public function addVoter(VoterInterface $voter): self
-    {
-        $this->voters[] = $voter;
-        return $this;
-    }
-
-    /**
-     * Get a string representation of the full reason chain.
-     */
-    public function trace(): string
-    {
-        return implode("\n", $this->chain);
-    }
-
-    /**
-     * Check if the last decision represents an ALLOW.
+     * Check if the decision allows.
      */
     public function isAllow(): bool
     {
-        return strtoupper($this->lastDecision ?? '') === 'ALLOW';
+        return $this->decision === VoteResult::ALLOW;
     }
 
     /**
-     * Check if the last decision represents a DENY.
+     * Check if the decision denies.
      */
     public function isDeny(): bool
     {
-        return strtoupper($this->lastDecision ?? '') === 'DENY';
+        return $this->decision === VoteResult::DENY;
     }
 
     /**
-     * Check if the last decision represents an ABSTAIN.
-     */
-    public function isAbstain(): bool
-    {
-        return strtoupper($this->lastDecision ?? '') === 'ABSTAIN';
-    }
-
-    /**
-     * Check if the reason carries the given code.
+     * Check if the final code is the given code.
+     *
+     * The final code comes from the deciding vote, so when several votes agree it depends on voter order. Use has()
+     * to ask whether any vote gave a code.
      */
     public function is(string|\BackedEnum $code): bool
     {
@@ -107,7 +68,7 @@ final class Reason
     }
 
     /**
-     * Check if the reason does not carry the given code.
+     * Check if the final code is not the given code.
      */
     public function isNot(string|\BackedEnum $code): bool
     {
@@ -115,13 +76,72 @@ final class Reason
     }
 
     /**
-     * Get the message given by the deciding vote.
+     * Check if the final code, or the code of any vote in this decision, is the given code.
+     *
+     * Unlike is(), this does not depend on voter order. Voters after an early stop never vote, so see wasComplete().
      */
-    public function given(): ?string
+    public function has(string|\BackedEnum $code): bool
     {
-        $given = $this->decidingVote ?? $this;
+        if ($this->is($code)) {
+            return true;
+        }
 
-        return $given->lastMessage ?? $given->message;
+        foreach ($this->votes as $vote) {
+            if ($vote->code === $code) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if neither the final code nor the code of any vote in this decision is the given code.
+     */
+    public function hasNot(string|\BackedEnum $code): bool
+    {
+        return $this->has($code) === false;
+    }
+
+    /**
+     * Get the codes given by the votes in this decision, in vote order, skipping votes without a code.
+     *
+     * @return list<string|\BackedEnum>
+     */
+    public function codes(): array
+    {
+        $codes = [];
+        foreach ($this->votes as $vote) {
+            if ($vote->code !== null) {
+                $codes[] = $vote->code;
+            }
+        }
+
+        return $codes;
+    }
+
+    /**
+     * Check if every configured voter voted, so that has(), codes() and votes saw them all.
+     */
+    public function wasComplete(): bool
+    {
+        return $this->complete;
+    }
+
+    /**
+     * Check if voting stopped early, so that some voters did not vote.
+     */
+    public function wasNotComplete(): bool
+    {
+        return $this->wasComplete() === false;
+    }
+
+    /**
+     * Get the message given by the deciding vote, or the final message when the strategy decided by itself.
+     */
+    public function given(): string
+    {
+        return $this->decidingVote->message ?? $this->message;
     }
 
     /**
@@ -145,6 +165,58 @@ final class Reason
     }
 
     /**
+     * Get a line for each vote in vote order, then a line for the final decision.
+     */
+    public function trace(): string
+    {
+        $lines = [];
+        foreach ($this->votes as $vote) {
+            $lines[] = self::traceLine($vote->decision, $vote->voter, $vote->message, $vote->code);
+        }
+        $lines[] = self::traceLine($this->decision, Rick::class, $this->message, $this->code);
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * Get the decision and every vote as an array, for example to log it.
+     *
+     * @return array{
+     *     user_id: string|int,
+     *     permission: string,
+     *     decision: string,
+     *     message: string,
+     *     code: string|\BackedEnum|null,
+     *     decided_by: class-string<VoterInterface>|null,
+     *     complete: bool,
+     *     votes: list<array{voter: class-string<VoterInterface>, decision: string, message: string, code: string|\BackedEnum|null}>
+     * }
+     */
+    public function toArray(): array
+    {
+        $votes = [];
+        foreach ($this->votes as $vote) {
+            $votes[] = [
+                'voter' => $vote->voter,
+                'decision' => $vote->decision,
+                'message' => $vote->message,
+                'code' => $vote->code,
+            ];
+        }
+
+        return [
+            'user_id' => $this->userId,
+            'permission' => $this->permission,
+            'decision' => $this->decision,
+            'message' => $this->message,
+            'code' => $this->code,
+            'decided_by' => $this->decidingVote?->voter,
+            'complete' => $this->complete,
+            'votes' => $votes,
+        ];
+    }
+
+    /**
      * Convert the reason to a string.
      */
     public function __toString(): string
@@ -153,20 +225,24 @@ final class Reason
             'Permission "%s" for user "%s" was %s by %s: %s',
             $this->permission,
             $this->userId,
-            strtolower((string) $this->decision),
-            $this->voter ?? 'Unknown',
-            $this->message ?? 'No message'
+            $this->isAllow() ? 'allowed' : 'denied',
+            $this->decidingVote->voter ?? Rick::class,
+            $this->given()
         );
     }
 
-    /** @return array{chain: array<string|null>, message: ?string, code: string|\BackedEnum|null, voters: array<VoterInterface>} */
-    public function getFullTrace(): array
+    private static function traceLine(string $decision, string $voter, string $message, string|\BackedEnum|null $code): string
     {
-        return [
-            'chain' => $this->chain,
-            'message' => $this->message,
-            'code' => $this->code,
-            'voters' => $this->voters,
-        ];
+        $line = sprintf('[%s] %s: %s', $decision, $voter, $message);
+
+        if ($code instanceof \BackedEnum) {
+            return $line . sprintf(' (%s::%s)', $code::class, $code->name);
+        }
+
+        if ($code !== null) {
+            return $line . sprintf(' (%s)', $code);
+        }
+
+        return $line;
     }
 }

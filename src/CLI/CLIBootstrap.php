@@ -37,12 +37,14 @@ final class CLIBootstrap
 
     /**
      * Create and configure the CLI application.
+     *
+     * @param string $envDirectory The directory to load a .env file from, if it has one
      */
-    public static function createApplication(): Application
+    public static function createApplication(string $envDirectory = __DIR__ . '/../..'): Application
     {
         // Load .env
-        if (file_exists(__DIR__ . '/../../.env')) {
-            (Dotenv::createImmutable(__DIR__ . '/../../'))->load();
+        if (file_exists($envDirectory . '/.env')) {
+            Dotenv::createImmutable($envDirectory)->load();
         }
 
         $entityManager = self::getEntityManager();

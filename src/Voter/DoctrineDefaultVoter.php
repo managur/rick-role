@@ -82,7 +82,14 @@ final class DoctrineDefaultVoter implements VoterInterface
             }
 
             // Use the strategy to decide the final result based on all collected votes
-            return $this->strategy->decide($voteResults);
+            $decision = $this->strategy->decide($voteResults);
+
+            // No role decided, so leave the permission to other voters
+            if ($decision->hasNoDecidingVote()) {
+                return VoteResult::abstain($decision->result->message());
+            }
+
+            return $decision->result;
         } catch (\Exception $e) {
             // Log the exception in a real application
             return VoteResult::deny('Error checking user permissions: ' . $e->getMessage());

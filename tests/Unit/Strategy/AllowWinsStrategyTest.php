@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RickRole\Strategy\AllowWinsStrategy;
 use RickRole\Tests\Unit\Fixture\ReasonCode;
+use RickRole\Strategy\Decision;
 use RickRole\Voter\VoteResult;
 
 /**
@@ -36,7 +37,7 @@ final class AllowWinsStrategyTest extends TestCase
     {
         $votes = [VoteResult::allow('User is admin')];
 
-        $result = $this->strategy->decide($votes);
+        $result = $this->strategy->decide($votes)->result;
 
         self::assertTrue($result->isAllow());
         self::assertStringContainsString('Allow wins', $result->message());
@@ -47,20 +48,20 @@ final class AllowWinsStrategyTest extends TestCase
     {
         $votes = [VoteResult::deny('User not found')];
 
-        $result = $this->strategy->decide($votes);
+        $result = $this->strategy->decide($votes)->result;
 
         self::assertTrue($result->isDeny());
         self::assertStringContainsString('No allow votes', $result->message());
     }
 
     #[Test]
-    public function it_abstains_when_single_abstain_vote(): void
+    public function it_denies_when_single_abstain_vote(): void
     {
         $votes = [VoteResult::abstain('Cannot determine')];
 
-        $result = $this->strategy->decide($votes);
+        $result = $this->strategy->decide($votes)->result;
 
-        self::assertTrue($result->isAbstain());
+        self::assertTrue($result->isDeny());
         self::assertStringContainsString('All voters abstained', $result->message());
     }
 
@@ -73,7 +74,7 @@ final class AllowWinsStrategyTest extends TestCase
             VoteResult::abstain('Third voter abstains')
         ];
 
-        $result = $this->strategy->decide($votes);
+        $result = $this->strategy->decide($votes)->result;
 
         self::assertTrue($result->isAllow());
     }
@@ -87,7 +88,7 @@ final class AllowWinsStrategyTest extends TestCase
             VoteResult::deny('Third voter denies')
         ];
 
-        $result = $this->strategy->decide($votes);
+        $result = $this->strategy->decide($votes)->result;
 
         self::assertTrue($result->isDeny());
     }
@@ -97,9 +98,9 @@ final class AllowWinsStrategyTest extends TestCase
     {
         $votes = [];
 
-        $result = $this->strategy->decide($votes);
+        $result = $this->strategy->decide($votes)->result;
 
-        self::assertTrue($result->isAbstain());
+        self::assertTrue($result->isDeny());
         self::assertStringContainsString('No votes provided', $result->message());
     }
 
@@ -112,7 +113,7 @@ final class AllowWinsStrategyTest extends TestCase
             VoteResult::allow('Second allow')
         ];
 
-        $result = $this->strategy->decide($votes);
+        $result = $this->strategy->decide($votes)->result;
 
         self::assertTrue($result->isAllow());
         self::assertStringContainsString('First allow', $result->message());
@@ -127,7 +128,7 @@ final class AllowWinsStrategyTest extends TestCase
             VoteResult::allow('Guest permission')
         ];
 
-        $result = $this->strategy->decide($votes);
+        $result = $this->strategy->decide($votes)->result;
 
         self::assertTrue($result->isAllow());
     }
@@ -141,7 +142,7 @@ final class AllowWinsStrategyTest extends TestCase
             VoteResult::deny('Account suspended')
         ];
 
-        $result = $this->strategy->decide($votes);
+        $result = $this->strategy->decide($votes)->result;
 
         self::assertTrue($result->isDeny());
     }
@@ -155,19 +156,20 @@ final class AllowWinsStrategyTest extends TestCase
             VoteResult::abstain('Third abstain')
         ];
 
-        $result = $this->strategy->decide($votes);
+        $result = $this->strategy->decide($votes)->result;
 
-        self::assertTrue($result->isAbstain());
+        self::assertTrue($result->isDeny());
     }
 
     #[Test]
-    public function it_returns_vote_result_instance(): void
+    public function it_returns_a_decision(): void
     {
         $votes = [VoteResult::allow('Test')];
 
-        $result = $this->strategy->decide($votes);
+        $decision = $this->strategy->decide($votes);
 
-        self::assertInstanceOf(VoteResult::class, $result);
+        self::assertInstanceOf(Decision::class, $decision);
+        self::assertInstanceOf(VoteResult::class, $decision->result);
     }
 
     #[Test]
@@ -179,7 +181,7 @@ final class AllowWinsStrategyTest extends TestCase
             VoteResult::allow($winningReason)
         ];
 
-        $result = $this->strategy->decide($votes);
+        $result = $this->strategy->decide($votes)->result;
 
         self::assertTrue($result->isAllow());
         self::assertStringContainsString($winningReason, $result->message());
@@ -196,7 +198,7 @@ final class AllowWinsStrategyTest extends TestCase
             VoteResult::deny('Time voter denies - outside business hours')
         ];
 
-        $result = $this->strategy->decide($votes);
+        $result = $this->strategy->decide($votes)->result;
 
         self::assertTrue($result->isAllow());
         self::assertStringContainsString('Admin voter allows', $result->message());
@@ -215,14 +217,14 @@ final class AllowWinsStrategyTest extends TestCase
             VoteResult::deny('Later deny - should be ignored')
         ];
 
-        $result = $this->strategy->decide($votes);
+        $result = $this->strategy->decide($votes)->result;
 
         self::assertTrue($result->isAllow());
         self::assertStringContainsString('First allow - should win', $result->message());
     }
 
     /**
-     * @param array<\RickRole\Voter\VoteResult> $votes
+     * @param list<\RickRole\Voter\VoteResult> $votes
      */
     #[DataProvider('decisionScenariosData')]
     #[Test]
@@ -231,11 +233,11 @@ final class AllowWinsStrategyTest extends TestCase
         string $expectedDecision,
         string $description
     ): void {
-        $result = $this->strategy->decide($votes);
+        $result = $this->strategy->decide($votes)->result;
         self::assertSame($expectedDecision, $result->result(), $description);
     }
 
-    /** @return array<string, array{votes: array<VoteResult>, expectedDecision: string, description: string}> */
+    /** @return array<string, array{votes: list<VoteResult>, expectedDecision: string, description: string}> */
     public static function decisionScenariosData(): array
     {
         return [
@@ -251,8 +253,8 @@ final class AllowWinsStrategyTest extends TestCase
             ],
             'single abstain' => [
                 'votes' => [VoteResult::abstain('Cannot determine')],
-                'expectedDecision' => 'abstain',
-                'description' => 'Single abstain vote should result in abstain decision'
+                'expectedDecision' => 'deny',
+                'description' => 'Single abstain vote should result in deny decision'
             ],
             'allow wins over deny' => [
                 'votes' => [VoteResult::deny('First denies'), VoteResult::allow('Second allows')],
@@ -281,13 +283,13 @@ final class AllowWinsStrategyTest extends TestCase
             ],
             'multiple abstains' => [
                 'votes' => [VoteResult::abstain('First'), VoteResult::abstain('Second'), VoteResult::abstain('Third')],
-                'expectedDecision' => 'abstain',
-                'description' => 'Multiple abstains should result in abstain'
+                'expectedDecision' => 'deny',
+                'description' => 'Multiple abstains should result in deny'
             ],
             'empty votes' => [
                 'votes' => [],
-                'expectedDecision' => 'abstain',
-                'description' => 'Empty votes should result in abstain'
+                'expectedDecision' => 'deny',
+                'description' => 'Empty votes should result in deny'
             ],
         ];
     }
@@ -331,7 +333,7 @@ final class AllowWinsStrategyTest extends TestCase
             VoteResult::allow('Allowed', code: ReasonCode::Mandatory),
         ];
 
-        $result = $this->strategy->decide($votes);
+        $result = $this->strategy->decide($votes)->result;
 
         self::assertSame(ReasonCode::Mandatory, $result->code());
     }
@@ -344,7 +346,7 @@ final class AllowWinsStrategyTest extends TestCase
             VoteResult::deny('Denied', code: 'role.deny'),
         ];
 
-        $result = $this->strategy->decide($votes);
+        $result = $this->strategy->decide($votes)->result;
 
         self::assertSame('role.deny', $result->code());
     }
@@ -352,8 +354,49 @@ final class AllowWinsStrategyTest extends TestCase
     #[Test]
     public function it_has_no_code_when_all_abstain(): void
     {
-        $result = $this->strategy->decide([VoteResult::abstain('Abstained', code: 'no.opinion')]);
+        $result = $this->strategy->decide([VoteResult::abstain('Abstained', code: 'no.opinion')])->result;
 
         self::assertNull($result->code());
+    }
+
+    #[Test]
+    public function it_names_the_first_allow_as_the_deciding_vote(): void
+    {
+        $votes = [VoteResult::deny('Denies'), VoteResult::abstain('Abstains'), VoteResult::allow('First allow'), VoteResult::allow('Second allow')];
+
+        $decision = $this->strategy->decide($votes);
+
+        self::assertSame($votes[2], $decision->decidingVote);
+        self::assertTrue($decision->hasDecidingVote());
+    }
+
+    #[Test]
+    public function it_names_the_first_deny_when_nothing_allows_as_the_deciding_vote(): void
+    {
+        $votes = [VoteResult::abstain('Abstains'), VoteResult::deny('First deny'), VoteResult::deny('Second deny')];
+
+        $decision = $this->strategy->decide($votes);
+
+        self::assertSame($votes[1], $decision->decidingVote);
+        self::assertTrue($decision->hasDecidingVote());
+    }
+
+    #[Test]
+    public function it_has_no_deciding_vote_when_all_abstain(): void
+    {
+        $decision = $this->strategy->decide([VoteResult::abstain('First'), VoteResult::abstain('Second')]);
+
+        self::assertTrue($decision->result->isDeny());
+        self::assertNull($decision->decidingVote);
+        self::assertTrue($decision->hasNoDecidingVote());
+    }
+
+    #[Test]
+    public function it_has_no_deciding_vote_without_votes(): void
+    {
+        $decision = $this->strategy->decide([]);
+
+        self::assertTrue($decision->result->isDeny());
+        self::assertTrue($decision->hasNoDecidingVote());
     }
 }
