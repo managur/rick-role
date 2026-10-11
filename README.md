@@ -669,9 +669,9 @@ The inverse of `wasComplete()`.
 
 #### `wasDecidedBy(string $voter): bool`
 
-Checks if this voter class cast the deciding vote. The strategy chooses the deciding vote; both built-in strategies
-choose the first vote that matches the final decision. It is `false` for every voter when the strategy decided by
-itself, for example because every voter abstained.
+Checks if this voter class cast the deciding vote. The deciding vote is the first vote that matches the final decision.
+Only the reason returned through `because` knows the deciding vote, so calling this on an earlier reason in the
+`previous` chain always returns `false`.
 
 #### `wasNotDecidedBy(string $voter): bool`
 
@@ -683,14 +683,8 @@ Returns the message given by the deciding vote, or the strategy's message when n
 
 #### `trace(): string`
 
-Returns one line per vote, in vote order, followed by a line for the final decision. Each line shows the decision, the
-voter class, the message and the code, if there is one.
-
-#### `toArray(): array`
-
-Returns the decision and every vote as an array, which is useful for logging. It has the keys `user_id`, `permission`,
-`decision`, `message`, `code`, `decided_by` (the deciding voter's class, or `null`), `complete` and `votes`. Each vote
-has `voter`, `decision`, `message` and `code`.
+Returns the message given by the deciding vote, or the reason's own message when no vote decided. On an earlier reason
+in the `previous` chain, this is that voter's own message.
 
 ## Permission Parameter Type
 

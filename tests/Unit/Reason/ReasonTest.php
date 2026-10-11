@@ -12,6 +12,7 @@ use RickRole\Reason\Vote;
 use RickRole\Tests\Unit\Fixture\ReasonCode;
 use RickRole\Voter\Example\IpAddressVoter;
 use RickRole\Voter\Example\TimeBasedVoter;
+use RickRole\Exception\ConfigurationException;
 
 /**
  * Unit tests for the Reason class.
@@ -239,10 +240,14 @@ final class ReasonTest extends TestCase
     #[Test]
     public function it_converts_to_an_array_without_votes(): void
     {
-        $reason = new Reason(123, 'edit post', null, 'deny', 'All voters abstained');
+        $decidingVote = new Reason(123, 'test', null, IpAddressVoter::class, 'DENY', 'MFA is mandatory');
+        $reason = new Reason(123, 'test', null, 'Rick', 'DENY', 'Deny wins - MFA is mandatory', decidingVote: $decidingVote);
 
-        self::assertNull($reason->toArray()['decided_by']);
-        self::assertSame([], $reason->toArray()['votes']);
+        self::assertTrue($reason->wasDecidedBy(IpAddressVoter::class));
+        self::assertFalse($reason->wasDecidedBy(TimeBasedVoter::class));
+        self::assertFalse($reason->wasNotDecidedBy(IpAddressVoter::class));
+        self::assertTrue($reason->wasNotDecidedBy(TimeBasedVoter::class));
+        self::assertSame('MFA is mandatory', $reason->given());
     }
 
     #[Test]
@@ -251,10 +256,9 @@ final class ReasonTest extends TestCase
         $decidingVote = new Vote(IpAddressVoter::class, 'allow', 'Role allows it');
         $reason = new Reason(123, 'edit post', null, 'allow', 'No deny votes found - Role allows it', decidingVote: $decidingVote);
 
-        self::assertSame(
-            'Permission "edit post" for user "123" was allowed by RickRole\Voter\Example\IpAddressVoter: Role allows it',
-            (string) $reason
-        );
+        self::assertFalse($reason->wasDecidedBy(IpAddressVoter::class));
+        self::assertTrue($reason->wasNotDecidedBy(IpAddressVoter::class));
+        self::assertSame('All voters abstained', $reason->given());
     }
 
     #[Test]
