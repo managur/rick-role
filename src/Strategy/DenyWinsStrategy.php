@@ -13,15 +13,15 @@ use RickRole\Voter\VoteResult;
  *
  * - If any voter returns DENY, access is denied
  * - If no voter returns DENY but at least one returns ALLOW, access is granted
- * - If all voters return ABSTAIN, access is denied (fail secure)
+ * - If all voters return ABSTAIN, or there are no votes, access is denied (fail secure)
  */
 final class DenyWinsStrategy implements StrategyInterface
 {
-    public function decide(array $voteResults): VoteResult
+    public function decide(array $voteResults): Decision
     {
-        // Handle empty votes
+        // Fail secure when there is nothing to decide on
         if (empty($voteResults)) {
-            return VoteResult::abstain('No votes provided');
+            return Decision::byStrategy(VoteResult::deny('No votes provided'));
         }
 
         $allowVote = null;
@@ -29,7 +29,7 @@ final class DenyWinsStrategy implements StrategyInterface
         foreach ($voteResults as $result) {
             if ($result->isDeny()) {
                 // In DenyWins strategy, we can return immediately on first deny
-                return VoteResult::deny('Deny wins - ' . $result->message(), code: $result->code());
+                return Decision::byVote($result, 'Deny wins - ' . $result->message());
             } elseif ($result->isAllow() && $allowVote === null) {
                 $allowVote = $result;
             }
@@ -37,11 +37,11 @@ final class DenyWinsStrategy implements StrategyInterface
 
         // ALLOW wins over ABSTAIN
         if ($allowVote !== null) {
-            return VoteResult::allow('No deny votes found - ' . $allowVote->message(), code: $allowVote->code());
+            return Decision::byVote($allowVote, 'No deny votes found - ' . $allowVote->message());
         }
 
         // All abstained - fail secure
-        return VoteResult::abstain('All voters abstained');
+        return Decision::byStrategy(VoteResult::deny('All voters abstained'));
     }
 
     public function shouldStopVoting(VoteResult $voteResult): bool
